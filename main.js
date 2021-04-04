@@ -6,8 +6,12 @@ const multer = require("multer");
 const router = express.Router();
 const path = require("path");
 const formidable = require("formidable");
+const bp = require("body-parser");
 let app = express();
+
 app.use(express.static("public")); //url로 파일 접근 가능
+app.use(bp.json());
+app.use(bp.urlencoded({ extended: true }));
 
 let list = {
   file: function (filelist) {
@@ -99,8 +103,8 @@ app.get("/create", function (request, response) {
           </head>
             <body>
             <form action="create_process" method="post" enctype="multipart/form-data">
-            <p><input type="file" name="filetoupload"></p>
-            <p><textarea id="description" name="description"></textarea>
+              <p><input type="file" name="filetoupload"></p>
+              <p><textarea id="description" name="description"></textarea>
             <input type="submit" value="submit">
           </form>
             </body>
@@ -109,8 +113,6 @@ app.get("/create", function (request, response) {
 
   response.send(html);
 });
-
-app.get("/post");
 
 app.post(
   "/create_process",
@@ -121,8 +123,9 @@ app.post(
       0,
       filename.length - 4
     )}.txt`;
-    console.log("filename : " + _filename);
+
     let description = request.body.description;
+    console.log(description);
     fs.writeFile(_filename, description, function (error) {
       //제목, 내용,
       response.redirect("/");
@@ -148,12 +151,16 @@ app.get("/update", function (request, response) {
           </head>
             <body>
               <a><img src="/data/images/${title}" style="width:100px;"></a>
-              <a>delete</a>
-              <form action="update_process" type="post">
-                <p>
-                  <textarea name="description" placeholder=${description}></textarea>
-                </p>
-                <input type=submit value="update">
+              <a href="/delete_process?title=${title}">delete</a>
+              <form method="post" action="update_process">
+               <input type="hidden" name="id" value="public/data/description/${title.substring(
+                 0,
+                 title.length - 4
+               )}.txt">
+               <p>
+                <textarea name="description" >${description}</textarea>
+               </p>
+               <input type="submit" value="update">
               </form>
             </body>
           </html>
@@ -163,6 +170,31 @@ app.get("/update", function (request, response) {
   );
 });
 
-app.get('u')
+app.post("/update_process", function (request, response) {
+  console.log(request.body);
+  let id = request.body.id;
+  let description = request.body.description;
+  console.log("id " + id);
+
+  fs.writeFile(`${id}`, description, function (error) {
+    response.redirect("/");
+  });
+});
+
+app.get("/delete_process", function (request, response) {
+  let baseURL = "http://" + request.headers.host + "/";
+  let myURL = new URL(request.url, baseURL);
+  let pathname = myURL.pathname;
+  let title = myURL.searchParams.get("title");
+
+  fs.unlink(
+    `public/data/description/${title.substring(0, title.length - 4)}.txt`,
+    function (error) {
+      fs.unlink(`public/data/images/${title}`, function (error) {
+        response.redirect("/");
+      });
+    }
+  );
+});
 
 app.listen(3000, () => console.log("HI port 3000"));
